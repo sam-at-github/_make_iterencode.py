@@ -1,3 +1,8 @@
+''' Override for function from built-in json module to allow formatting of JSON two container types
+(arrays and objects), to be optionally specified separately by allowing `indent` to be a 2-tuple.
+Copied this from v3.5.6 (Lib/json/encoder.py) but looks about the same in 3.4-3.6. Probably wont
+work in >=3.7.
+'''
 def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
         _key_separator, _item_separator, _sort_keys, _skipkeys, _one_shot,
         ## HACK: hand-optimized bytecode; turn globals into locals
@@ -13,8 +18,15 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
         _intstr=int.__str__,
     ):
 
+    _array_indent = None
+    if isinstance(_indent, tuple):
+        (_indent, _array_indent) = _indent
+    else:
+        _array_indent = _indent
     if _indent is not None and not isinstance(_indent, str):
         _indent = ' ' * _indent
+    if _array_indent is not None and not isinstance(_array_indent, str):
+        _array_indent = ' ' * _array_indent
 
     def _iterencode_list(lst, _current_indent_level):
         if not lst:
@@ -26,9 +38,9 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 raise ValueError("Circular reference detected")
             markers[markerid] = lst
         buf = '['
-        if _indent is not None:
+        if _array_indent is not None:
             _current_indent_level += 1
-            newline_indent = '\n' + _indent * _current_indent_level
+            newline_indent = '\n' + _array_indent * _current_indent_level
             separator = _item_separator + newline_indent
             buf += newline_indent
         else:
@@ -67,7 +79,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 yield from chunks
         if newline_indent is not None:
             _current_indent_level -= 1
-            yield '\n' + _indent * _current_indent_level
+            yield '\n' + _array_indent * _current_indent_level
         yield ']'
         if markers is not None:
             del markers[markerid]
